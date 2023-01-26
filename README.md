@@ -1,10 +1,9 @@
 
 # Noisy
-[![CircleCI](https://circleci.com/gh/1tayH/noisy/tree/master.svg?style=shield)](https://circleci.com/gh/1tayH/noisy/tree/master)
 
 A simple python script that generates random HTTP/DNS traffic noise in the background while you go about your regular web browsing, to make your web traffic data less valuable for selling and for extra obscurity.
 
-Tested on MacOS High Sierra, Ubuntu 16.04 and Raspbian Stretch and is compatable with both Python 2.7 and 3.6
+Tested with python 3
 
 ## Getting Started
 
@@ -82,10 +81,6 @@ DEBUG:urllib3.connectionpool:https://www.reddit.com:443 "GET /user/Saditon HTTP/
 
 `docker build -t noisy .`
 
-**Or** if you'd like to build it for a **Raspberry Pi** (running Raspbian stretch):
-
-`docker build -f Dockerfile.pi -t noisy .`
-
 2. Create the container and run:
 
 `docker run -it noisy --config config.json`
@@ -94,18 +89,12 @@ DEBUG:urllib3.connectionpool:https://www.reddit.com:443 "GET /user/Saditon HTTP/
 
 Some edge-cases examples are available on the `examples` folder. You can read more there [examples/README.md](examples/README.md).
 
-## Authors
+## Special Thanks
 
 * **Itay Hury** - *Initial work* - [1tayH](https://github.com/1tayH)
 
-See also the list of [contributors](https://github.com/1tayH/Noisy/contributors) who participated in this project.
+See also the list of [contributors](https://github.com/1tayH/Noisy/contributors) who participated to noisy original project.
 
 ## License
 
 This project is licensed under the GNU GPLv3 License - see the [LICENSE.md](LICENSE.md) file for details
-
-## Acknowledgments
-
-This project has been inspired by
-* [RandomNoise](http://www.randomnoise.us)
-* [web-traffic-generator](https://github.com/ecapuano/web-traffic-generator)
