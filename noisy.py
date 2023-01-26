@@ -7,6 +7,8 @@ import re
 import sys
 import time
 
+URL_PATTERN = re.compile(r"href=[\"'](?!#)(.*?)[\"']", re.DOTALL)
+
 import requests
 from urllib3.exceptions import LocationParseError
 
@@ -80,21 +82,11 @@ class Crawler(object):
 
     @staticmethod
     def _is_valid_url(url):
-        """
-        Check if a url is a valid url.
-        Used to filter out invalid values that were found in the "href" attribute,
-        for example "javascript:void(0)"
-        taken from https://stackoverflow.com/questions/7160737
-        :param url: url to be checked
-        :return: boolean indicating whether the URL is valid or not
-        """
-        regex = re.compile(
-            r'^(?:http|ftp)s?://'  # http:// or https://
-            r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain...
-            r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
-            r'(?::\d+)?'  # optional port
-            r'(?:/?|[/?]\S+)$', re.IGNORECASE)
-        return re.match(regex, url) is not None
+        try:
+            result = urlparse(url)
+            return all([result.scheme, result.netloc])
+        except ValueError:
+            return False
 
     def _is_blacklisted(self, url):
         """
@@ -113,19 +105,12 @@ class Crawler(object):
         return url and self._is_valid_url(url) and not self._is_blacklisted(url)
 
     def _extract_urls(self, body, root_url):
-        """
-        gathers links to be visited in the future from a web page's body.
-        does it by finding "href" attributes in the DOM
-        :param body: the HTML body to extract links from
-        :param root_url: the root URL of the given body
-        :return: list of extracted links
-        """
-        pattern = r"href=[\"'](?!#)(.*?)[\"'].*?"  # ignore links starting with #, no point in re-visiting the same page
-        urls = re.findall(pattern, str(body))
-
-        normalize_urls = [self._normalize_link(url, root_url) for url in urls]
-        filtered_urls = list(filter(self._should_accept_url, normalize_urls))
-
+        urls = re.findall(URL_PATTERN, str(body))
+        filtered_urls = []
+        for url in urls:
+            normalized_url = self._normalize_link(url, root_url)
+            if self._should_accept_url(normalized_url):
+                filtered_urls.append(normalized_url)
         return filtered_urls
 
     def _remove_and_blacklist(self, link):
@@ -137,46 +122,29 @@ class Crawler(object):
         self._config['blacklisted_urls'].append(link)
         del self._links[self._links.index(link)]
 
-    def _browse_from_links(self, depth=0):
-        """
-        Selects a random link out of the available link list and visits it.
-        Blacklists any link that is not responsive or that contains no other links.
-        Please note that this function is recursive and will keep calling itself until
-        a dead end has reached or when we ran out of links
-        :param depth: our current link depth
-        """
-        is_depth_reached = depth >= self._config['max_depth']
-        if not len(self._links) or is_depth_reached:
-            logging.debug("Hit a dead end, moving to the next root URL")
-            # escape from the recursion, we don't have links to continue or we have reached the max depth
-            return
+    def _browse_from_links(self):
+        depth = 0
+        while depth < self._config['max_depth'] and not self._is_timeout_reached():
+            if not self._links:
+                logging.debug("Hit a dead end, moving to the next root URL")
+                return
+            random_link = random.choice(self._links)
+            try:
+                logging.info("Visiting {}".format(random_link))
+                sub_page = self._request(random_link).content
+                sub_links = self._extract_urls(sub_page, random_link)
+                time.sleep(random.randrange(self._config["min_sleep"], self._config["max_sleep"]))
+                if len(sub_links) > 1:
+                    self._links = self._extract_urls(sub_page, random_link)
+                else:
+                    self._remove_and_blacklist(random_link)
+                depth += 1
+            except requests.exceptions.RequestException:
+                logging.debug("Exception on URL: %s, removing from list and trying again!" % random_link)
+                self._remove_and_blacklist(random_link)
 
         if self._is_timeout_reached():
             raise self.CrawlerTimedOut
-
-        random_link = random.choice(self._links)
-        try:
-            logging.info("Visiting {}".format(random_link))
-            sub_page = self._request(random_link).content
-            sub_links = self._extract_urls(sub_page, random_link)
-
-            # sleep for a random amount of time
-            time.sleep(random.randrange(self._config["min_sleep"], self._config["max_sleep"]))
-
-            # make sure we have more than 1 link to pick from
-            if len(sub_links) > 1:
-                # extract links from the new page
-                self._links = self._extract_urls(sub_page, random_link)
-            else:
-                # else retry with current link list
-                # remove the dead-end link from our list
-                self._remove_and_blacklist(random_link)
-
-        except requests.exceptions.RequestException:
-            logging.debug("Exception on URL: %s, removing from list and trying again!" % random_link)
-            self._remove_and_blacklist(random_link)
-
-        self._browse_from_links(depth + 1)
 
     def load_config_file(self, file_path):
         """
@@ -239,7 +207,7 @@ class Crawler(object):
 
             except requests.exceptions.RequestException:
                 logging.warn("Error connecting to root url: {}".format(url))
-                
+
             except MemoryError:
                 logging.warn("Error: content at url: {} is exhausting the memory".format(url))
 
