@@ -1,5 +1,5 @@
 
-# Noisy
+# Loudy
 
 A simple python script that generates random HTTP/DNS traffic noise in the background while you go about your regular web browsing, to make your web traffic data less valuable for selling and for extra obscurity.
 
@@ -21,24 +21,24 @@ pip install requests
 
 Clone the repository
 ```
-git clone https://github.com/jackyes/noisy.git
+git clone https://github.com/jackyes/loudy.git
 ```
 
-Navigate into the `noisy` directory
+Navigate into the `loudy` directory
 ```
-cd noisy
+cd loudy
 ```
 
 Run the script
 
 ```
-python noisy.py --config config.json
+python loudy.py --config config.json
 ```
 
 The program can accept a number of command line arguments:
 ```
-$ python noisy.py --help
-usage: noisy.py [-h] [--log -l] --config -c [--timeout -t]
+$ python loudy.py --help
+usage: loudy.py [-h] [--log -l] --config -c [--timeout -t]
 
 optional arguments:
   -h, --help    show this help message and exit
@@ -50,7 +50,7 @@ only the config file argument is required.
 
 ###  Output
 ```
-$ docker run -it noisy --config config.json --log debug
+$ docker run -it loudy --config config.json --log debug
 DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 4chan.org:80
 DEBUG:urllib3.connectionpool:http://4chan.org:80 "GET / HTTP/1.1" 301 None
 DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): www.4chan.org:80
@@ -79,11 +79,11 @@ DEBUG:urllib3.connectionpool:https://www.reddit.com:443 "GET /user/Saditon HTTP/
 
 1. Build the image
 
-`docker build -t noisy .`
+`docker build -t loudy .`
 
 2. Create the container and run:
 
-`docker run -it noisy --config config.json`
+`docker run -it loudy --config config.json`
 
 ## Some examples
 
