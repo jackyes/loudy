@@ -12,16 +12,7 @@ URL_PATTERN = re.compile(r"href=[\"'](?!#)(.*?)[\"']", re.DOTALL)
 import requests
 from urllib3.exceptions import LocationParseError
 
-try:                 # Python 2
-    from urllib.parse import urljoin, urlparse
-except ImportError:  # Python 3
-    from urlparse import urljoin, urlparse
-
-try:                 # Python 2
-    reload(sys)
-    sys.setdefaultencoding('latin-1')
-except NameError:    # Python 3
-    pass
+from urllib.parse import urljoin, urlparse
 
 
 class Crawler(object):
@@ -62,23 +53,18 @@ class Crawler(object):
         :param root_url: the URL the DOM was loaded from
         :return: absolute link
         """
-        try:
-            parsed_url = urlparse(link)
-        except ValueError:
-            # urlparse can get confused about urls with the ']'
-            # character and thinks it must be a malformed IPv6 URL
-            return None
         parsed_root_url = urlparse(root_url)
 
         # '//' means keep the current protocol used to access this URL
         if link.startswith("//"):
-            return "{}://{}{}".format(parsed_root_url.scheme, parsed_url.netloc, parsed_url.path)
+            return "{}:{}".format(parsed_root_url.scheme, link)
 
         # possibly a relative path
-        if not parsed_url.scheme:
+        if not urlparse(link).scheme:
             return urljoin(root_url, link)
 
         return link
+
 
     @staticmethod
     def _is_valid_url(url):
