@@ -50,31 +50,26 @@ only the config file argument is required.
 
 ###  Output
 ```
-$ docker run -it loudy --config config.json --log debug
-DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 4chan.org:80
-DEBUG:urllib3.connectionpool:http://4chan.org:80 "GET / HTTP/1.1" 301 None
-DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): www.4chan.org:80
-DEBUG:urllib3.connectionpool:http://www.4chan.org:80 "GET / HTTP/1.1" 200 None
-DEBUG:root:found 92 links
-INFO:root:Visiting http://boards.4chan.org/s4s/
-DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): boards.4chan.org:80
-DEBUG:urllib3.connectionpool:http://boards.4chan.org:80 "GET /s4s/ HTTP/1.1" 200 None
-INFO:root:Visiting http://boards.4chan.org/s4s/thread/6850193#p6850345
-DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): boards.4chan.org:80
-DEBUG:urllib3.connectionpool:http://boards.4chan.org:80 "GET /s4s/thread/6850193 HTTP/1.1" 200 None
-INFO:root:Visiting http://boards.4chan.org/o/
-DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): boards.4chan.org:80
-DEBUG:urllib3.connectionpool:http://boards.4chan.org:80 "GET /o/ HTTP/1.1" 200 None
-DEBUG:root:Hit a dead end, moving to the next root URL
-DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): www.reddit.com:443
-DEBUG:urllib3.connectionpool:https://www.reddit.com:443 "GET / HTTP/1.1" 200 None
-DEBUG:root:found 237 links
-INFO:root:Visiting https://www.reddit.com/user/Saditon
-DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): www.reddit.com:443
-DEBUG:urllib3.connectionpool:https://www.reddit.com:443 "GET /user/Saditon HTTP/1.1" 200 None
+$ docker run jackyes/loudy
+INFO:root:Visiting https://moz.com/domain-analysis/mega.nz
+INFO:root:Visiting https://berkeley.edu
+INFO:root:Visiting https://give.berkeley.edu/?sc=111443
+INFO:root:Visiting https://dac.berkeley.edu/web-accessibility
+INFO:root:Visiting https://dac.berkeley.edu/campus-events/coming-events
+INFO:root:Visiting http://www.dsp.berkeley.edu
+INFO:root:Visiting http://www.dsp.berkeley.edu/campus-resources/community-partners
+INFO:root:Visiting http://axisdance.org
+INFO:root:Visiting https://axisdance.org/calendar/category/axis-performances/axis-performances-online/
+INFO:root:Visiting https://axisdance.org/presenters/
+INFO:root:Visiting https://axisdance.org/feed/
+
 ...
 ```
 
+## Run with image from dockerhub
+
+`docker run jackyes/loudy`  
+  
 ## Build Using Docker
 
 1. Build the image
