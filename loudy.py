@@ -8,14 +8,19 @@ import sys
 import time
 
 URL_PATTERN = re.compile(r"href=[\"'](?!#)(.*?)[\"']", re.DOTALL)
-
 import requests
 from urllib3.exceptions import LocationParseError
 
 from urllib.parse import urljoin, urlparse
 
 
-class Crawler(object):
+class Crawler:
+    class CrawlerTimedOut(Exception):
+        """
+        Raised when the specified timeout is exceeded
+        """
+        pass
+
     def __init__(self):
         """
         Initializes the Crawl class
@@ -24,15 +29,39 @@ class Crawler(object):
         self._links = []
         self._start_time = None
 
-    class CrawlerTimedOut(Exception):
+    def load_config_file(self, file_path):
         """
-        Raised when the specified timeout is exceeded
+        Loads and decodes a JSON config file, sets the config of the crawler instance
+        to the loaded one
+        :param file_path: path of the config file
         """
-        pass
+        with open(file_path, 'r') as config_file:
+            self.set_config(json.load(config_file))
+
+    def set_config(self, config):
+        """
+        Sets the config of the crawler instance to the provided dict
+        :param config: dict of configuration options, for example:
+        {
+            "root_urls": [],
+            "blacklisted_urls": [],
+            "click_depth": 5
+            ...
+        }
+        """
+        self._config = config
+
+    def set_option(self, option, value):
+        """
+        Sets a specific key in the config dict
+        :param option: the option key in the config, for example: "max_depth"
+        :param value: value for the option
+        """
+        self._config[option] = value
 
     def _request(self, url):
         """
-        Sends a POST/GET requests using a random user agent
+        Sends a GET requests using a random user agent
         :param url: the url to visit
         :return: the response Requests object
         """
@@ -41,7 +70,7 @@ class Crawler(object):
 
         response = requests.get(url, headers=headers, timeout=5)
 
-        return response
+        return response.content
 
     @staticmethod
     def _normalize_link(link, root_url):
@@ -65,9 +94,12 @@ class Crawler(object):
 
         return link
 
-
-    @staticmethod
-    def _is_valid_url(url):
+    def _is_valid_url(self, url):
+        """
+        Determines whether a URL is valid, for example:
+        'https://example.com/path' is valid
+        '/path' is not valid
+        """
         try:
             result = urlparse(url)
             return all([result.scheme, result.netloc])
@@ -76,7 +108,7 @@ class Crawler(object):
 
     def _is_blacklisted(self, url):
         """
-        Checks is a URL is blacklisted
+        Checks if a URL is blacklisted
         :param url: full URL
         :return: boolean indicating whether a URL is blacklisted or not
         """
@@ -84,13 +116,19 @@ class Crawler(object):
 
     def _should_accept_url(self, url):
         """
-        filters url if it is blacklisted or not valid, we put filtering logic here
+        Filters url if it is blacklisted or not valid, we put filtering logic here
         :param url: full url to be checked
         :return: boolean of whether or not the url should be accepted and potentially visited
         """
         return url and self._is_valid_url(url) and not self._is_blacklisted(url)
 
     def _extract_urls(self, body, root_url):
+        """
+        Extracts URLs from a HTML page
+        :param body: the HTML page
+        :param root_url: the root URL of the page
+        :return: list of extracted URLs
+        """
         urls = re.findall(URL_PATTERN, str(body))
         filtered_urls = []
         for url in urls:
@@ -117,9 +155,9 @@ class Crawler(object):
             random_link = random.choice(self._links)
             try:
                 logging.info("Visiting {}".format(random_link))
-                sub_page = self._request(random_link).content
+                sub_page = self._request(random_link)
                 sub_links = self._extract_urls(sub_page, random_link)
-                time.sleep(random.randrange(self._config["min_sleep"], self._config["max_sleep"]))
+                time.sleep(random.uniform(self._config["min_sleep"], self._config["max_sleep"]))
                 if len(sub_links) > 1:
                     self._links = self._extract_urls(sub_page, random_link)
                 else:
@@ -131,38 +169,6 @@ class Crawler(object):
 
         if self._is_timeout_reached():
             raise self.CrawlerTimedOut
-
-    def load_config_file(self, file_path):
-        """
-        Loads and decodes a JSON config file, sets the config of the crawler instance
-        to the loaded one
-        :param file_path: path of the config file
-        :return:
-        """
-        with open(file_path, 'r') as config_file:
-            config = json.load(config_file)
-            self.set_config(config)
-
-    def set_config(self, config):
-        """
-        Sets the config of the crawler instance to the provided dict
-        :param config: dict of configuration options, for example:
-        {
-            "root_urls": [],
-            "blacklisted_urls": [],
-            "click_depth": 5
-            ...
-        }
-        """
-        self._config = config
-
-    def set_option(self, option, value):
-        """
-        Sets a specific key in the config dict
-        :param option: the option key in the config, for example: "max_depth"
-        :param value: value for the option
-        """
-        self._config[option] = value
 
     def _is_timeout_reached(self):
         """
@@ -186,7 +192,7 @@ class Crawler(object):
         while True:
             url = random.choice(self._config["root_urls"])
             try:
-                body = self._request(url).content
+                body = self._request(url)
                 self._links = self._extract_urls(body, url)
                 logging.debug("found {} links".format(len(self._links)))
                 self._browse_from_links()
