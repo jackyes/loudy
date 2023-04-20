@@ -157,7 +157,8 @@ class Crawler:
                 logging.info("Visiting {}".format(random_link))
                 sub_page = self._request(random_link)
                 sub_links = self._extract_urls(sub_page, random_link)
-                time.sleep(random.uniform(self._config["min_sleep"], self._config["max_sleep"]))
+                time.sleep(random.uniform(self._config["min_sleep"], self._config["max_sleep"]) / 1000)  # Sleep in milliseconds
+
                 if len(sub_links) > 1:
                     self._links = self._extract_urls(sub_page, random_link)
                 else:
