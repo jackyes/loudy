@@ -1,7 +1,7 @@
 {
     "max_depth": 20,
-    "min_sleep": 1,
-    "max_sleep": 3,
+    "min_sleep": 1000,
+    "max_sleep": 3000,
     "timeout": false,
     "root_urls": [
         "https://www.reddit.com",
