@@ -199,13 +199,13 @@ class Crawler:
                 self._browse_from_links()
 
             except requests.exceptions.RequestException:
-                logging.warn("Error connecting to root url: {}".format(url))
+                logging.warning("Error connecting to root url: {}".format(url))
 
             except MemoryError:
-                logging.warn("Error: content at url: {} is exhausting the memory".format(url))
+                logging.warning("Error: content at url: {} is exhausting the memory".format(url))
 
             except LocationParseError:
-                logging.warn("Error encountered during parsing of: {}".format(url))
+                logging.warning("Error encountered during parsing of: {}".format(url))
 
             except self.CrawlerTimedOut:
                 logging.info("Timeout has exceeded, exiting")
@@ -228,7 +228,11 @@ def main():
     if args.timeout:
         crawler.set_option('timeout', args.timeout)
 
-    crawler.crawl()
+    try:
+        crawler.crawl()
+    except Exception as e:
+        logging.error("An error occurred during the crawl: {}".format(e))
+        raise
 
 
 if __name__ == '__main__':
