@@ -2,6 +2,7 @@
     "max_depth": 20,
     "min_sleep": 1000,
     "max_sleep": 3000,
+    "max_workers": 5,
     "timeout": false,
     "root_urls": [
         "https://www.reddit.com",
