@@ -12,6 +12,7 @@ from urllib.parse import urljoin, urlparse
 from threading import Thread
 from queue import Queue
 from requests import Session
+from concurrent.futures import ThreadPoolExecutor
 
 URL_PATTERN = re.compile(r"href=[\"'](?!#)(.*?)[\"']", re.DOTALL)
 
@@ -189,27 +190,28 @@ class Crawler:
         `_browse_from_links` to browse them
         """
         self._start_time = datetime.datetime.now()
+        with ThreadPoolExecutor(max_workers=self._config["max_workers"]) as executor:
+            while True:
+                url = random.choice(self._config["root_urls"])
+                try:
+                    future = executor.submit(self._request, url)
+                    body = future.result()
+                    self._extract_urls(body, url)
+                    logging.debug("found {} links".format(len(self._links)))
+                    self._browse_from_links()
 
-        while True:
-            url = random.choice(self._config["root_urls"])
-            try:
-                body = self._request(url)
-                self._extract_urls(body, url)
-                logging.debug("found {} links".format(len(self._links)))
-                self._browse_from_links()
+                except requests.exceptions.RequestException:
+                    logging.warning("Error connecting to root url: {}".format(url))
 
-            except requests.exceptions.RequestException:
-                logging.warning("Error connecting to root url: {}".format(url))
+                except MemoryError:
+                    logging.warning("Error: content at url: {} is exhausting the memory".format(url))
 
-            except MemoryError:
-                logging.warning("Error: content at url: {} is exhausting the memory".format(url))
+                except LocationParseError:
+                    logging.warning("Error encountered during parsing of: {}".format(url))
 
-            except LocationParseError:
-                logging.warning("Error encountered during parsing of: {}".format(url))
-
-            except self.CrawlerTimedOut:
-                logging.info("Timeout has exceeded, exiting")
-                return
+                except self.CrawlerTimedOut:
+                    logging.info("Timeout has exceeded, exiting")
+                    return
 
 def main():
     parser = argparse.ArgumentParser()
