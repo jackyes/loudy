@@ -13,6 +13,7 @@ from threading import Thread
 from queue import Queue
 from requests import Session
 from concurrent.futures import ThreadPoolExecutor
+from bs4 import BeautifulSoup
 
 URL_PATTERN = re.compile(r"href=[\"'](?!#)(.*?)[\"']", re.DOTALL)
 
@@ -135,11 +136,15 @@ class Crawler:
         :param root_url: the root URL of the page
         :return: list of extracted URLs
         """
-        urls = re.findall(URL_PATTERN, str(body))
-        for url in urls:
-            normalized_url = self._normalize_link(url, root_url)
-            if self._should_accept_url(normalized_url):
-                self._links.add(normalized_url)
+        soup = BeautifulSoup(body, 'html.parser')
+        for link in soup.find_all('a'):  # Find all <a> tags
+            url = link.get('href')  # Extract the href attribute
+            if url:  # Check if url is not None
+                normalized_url = self._normalize_link(url, root_url)
+                if self._should_accept_url(normalized_url):
+                    self._links.add(normalized_url)
+
+
 
     def _remove_and_blacklist(self, link):
         """
