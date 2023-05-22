@@ -15,6 +15,7 @@ Install `requests` if you do not have it already installed, using `pip`:
 
 ```
 pip install requests
+pip install beautifulsoup4
 ```
 
 ### Usage
