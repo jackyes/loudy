@@ -72,7 +72,8 @@ class Crawler:
         random_user_agent = random.choice(self._config["user_agents"])
         headers = {'user-agent': random_user_agent}
 
-        response = requests.get(url, headers=headers, timeout=5)
+        response = self.session.get(url, headers=headers, timeout=5)
+
 
         return response.content
 
