@@ -118,7 +118,8 @@ class Crawler:
         :param url: full URL
         :return: boolean indicating whether a URL is blacklisted or not
         """
-        return url in self._blacklisted_links
+        return any(blacklisted in url for blacklisted in self._config["blacklisted_urls"])
+
 
 
     def _should_accept_url(self, url):
