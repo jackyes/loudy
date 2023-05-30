@@ -137,14 +137,16 @@ class Crawler:
         :param root_url: the root URL of the page
         :return: list of extracted URLs
         """
-        soup = BeautifulSoup(body, 'html.parser')
-        for link in soup.find_all('a'):  # Find all <a> tags
-            url = link.get('href')  # Extract the href attribute
-            if url:  # Check if url is not None
-                normalized_url = self._normalize_link(url, root_url)
-                if self._should_accept_url(normalized_url):
-                    self._links.add(normalized_url)
-
+        try:
+            soup = BeautifulSoup(body, 'html.parser')
+            for link in soup.find_all('a'):  # Find all <a> tags
+                url = link.get('href')  # Extract the href attribute
+                if url:  # Check if url is not None
+                    normalized_url = self._normalize_link(url, root_url)
+                    if self._should_accept_url(normalized_url):
+                        self._links.add(normalized_url)
+        except ParserRejectedMarkup:
+            logging.warning("The parser was unable to parse the HTML at URL: {}".format(root_url))
 
 
     def _remove_and_blacklist(self, link):
