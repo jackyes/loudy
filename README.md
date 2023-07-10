@@ -33,12 +33,12 @@ cd loudy
 Run the script
 
 ```
-python loudy.py --config config.json
+python3 loudy.py --config config.json
 ```
 
 The program can accept a number of command line arguments:
 ```
-$ python loudy.py --help
+$ python3 loudy.py --help
 usage: loudy.py [-h] [--log -l] --config -c [--timeout -t]
 
 optional arguments:
