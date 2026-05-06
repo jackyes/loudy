@@ -12,8 +12,8 @@ from urllib.parse import urljoin, urlparse
 from threading import Thread
 from queue import Queue
 from requests import Session
-from concurrent.futures import ThreadPoolExecutor
-from bs4 import BeautifulSoup
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from bs4 import BeautifulSoup, ParserRejectedMarkup
 
 URL_PATTERN = re.compile(r"href=[\"'](?!#)(.*?)[\"']", re.DOTALL)
 
@@ -55,6 +55,8 @@ class Crawler:
         }
         """
         self._config = config
+        blacklist_entries = [re.escape(e) for e in config.get("blacklisted_urls", [])]
+        self._blacklist_re = re.compile("|".join(blacklist_entries)) if blacklist_entries else None
 
     def set_option(self, option, value):
         """
@@ -114,11 +116,16 @@ class Crawler:
 
     def _is_blacklisted(self, url):
         """
-        Checks if a URL is blacklisted
+        Checks if a URL is blacklisted against both the config blacklist and
+        runtime blacklist (URLs that previously failed).
         :param url: full URL
         :return: boolean indicating whether a URL is blacklisted or not
         """
-        return any(blacklisted in url for blacklisted in self._config["blacklisted_urls"])
+        if url in self._blacklisted_links:
+            return True
+        if self._blacklist_re and self._blacklist_re.search(url):
+            return True
+        return False
 
 
 
@@ -151,34 +158,46 @@ class Crawler:
 
     def _remove_and_blacklist(self, link):
         """
-        Adds a link to the blacklist
+        Removes a link from the active set and adds it to the runtime blacklist
+        so it won't be retried.
         :param link: link to blacklist
         """
+        self._links.discard(link)
         self._blacklisted_links.add(link)
+
+    def _fetch_and_extract(self, link):
+        sub_page = self._request(link)
+        self._extract_urls(sub_page, link)
+        time.sleep(random.uniform(self._config["min_sleep"], self._config["max_sleep"]) / 1000)
 
     def _browse_from_links(self):
         depth = 0
-        while depth < self._config['max_depth'] and not self._is_timeout_reached():
-            if not self._links:
-                logging.debug("Hit a dead end, moving to the next root URL")
-                return
-            random_link = random.sample(list(self._links), 1)[0]
-            try:
-                logging.info("Visiting {}".format(random_link))
-                sub_page = self._request(random_link)
-                self._extract_urls(sub_page, random_link) 
-                time.sleep(random.uniform(self._config["min_sleep"], self._config["max_sleep"]) / 1000)  # Sleep in milliseconds
+        max_workers = self._config.get("max_workers", 5)
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            while depth < self._config['max_depth'] and not self._is_timeout_reached():
+                if not self._links:
+                    logging.debug("Hit a dead end, moving to the next root URL")
+                    return
 
-                if random_link not in self._links:  # Check if the link is still in the set
-                    self._remove_and_blacklist(random_link)
-                depth += 1
-            except requests.exceptions.RequestException:
-                logging.debug("Exception on URL: %s, removing from list and trying again!" % random_link)
-                self._remove_and_blacklist(random_link)
+                batch_size = min(max_workers, len(self._links))
+                links_to_fetch = random.sample(tuple(self._links), batch_size)
 
+                futures = {}
+                for link in links_to_fetch:
+                    logging.info("Visiting {}".format(link))
+                    futures[executor.submit(self._fetch_and_extract, link)] = link
 
-        if self._is_timeout_reached():
-            raise self.CrawlerTimedOut
+                for future in as_completed(futures):
+                    link = futures[future]
+                    try:
+                        future.result()
+                        depth += 1
+                    except requests.exceptions.RequestException:
+                        logging.debug("Exception on URL: %s, removing from list and trying again!" % link)
+                        self._remove_and_blacklist(link)
+
+                if self._is_timeout_reached():
+                    raise self.CrawlerTimedOut
 
 
     def _is_timeout_reached(self):
